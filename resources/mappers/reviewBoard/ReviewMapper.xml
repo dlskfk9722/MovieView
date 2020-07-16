@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ReviewMapper">
+
+	<!-- UserResultMap 설정 -->
+	<resultMap id="ReviewResultMap" type="com.spring.movieview.review.model.ReviewVO">
+       	<id property="reviewNo" column= "review_no"/>
+       	<result property = "movieNo" column="movie_no"/>
+       	<result property = "reviewTitle" column = "review_title"/>
+       	<result property = "reviewWriter" column = "review_writer" />
+       	<result property = "reviewContent" column = "review_content" />
+       	<result property = "regDate" column = "reg_date" />
+		<result property = "viewCnt" column = "view_cnt" /> 
+		
+		<result property = "starCnt" column = "star_cnt" />  
+		<result property = "starSum" column = "star_sum" /> 	        
+		
+		<result property = "fileId" column = "file_id" /> 	        
+		<result property = "fileName" column = "file_name" /> 	        
+		<result property = "fileSize" column = "file_size" /> 	        
+		<result property = "fileContentType" column = "file_content_type" /> 	      	        
+    </resultMap>
+    
+    <!--  업로드용 filemap -->
+	<resultMap id="FileMap" type="com.spring.movieview.review.model.ReviewUploadFileVO">
+		<id property = "fileId" column = "file_id" /> 	        
+		<result property = "reviewNo" column = "review_no" />
+		<result property = "fileName" column = "file_name" /> 	        
+		<result property = "fileSize" column = "file_size" /> 	        
+		<result property = "fileContentType" column = "file_content_type" /> 	
+		<result property = "fileData" column = "file_data" />
+	</resultMap>
+
+	<!-- 리뷰 등록 SQL -->
+	<insert id="insert">
+		INSERT INTO movieview_review 
+		(review_title, review_writer, review_content, movie_no) 
+		VALUES (#{reviewTitle}, #{reviewWriter}, #{reviewContent}, #{movieNo});
+	</insert>
+	
+	<!-- 목록보기 -->
+	<select id="list" resultMap="ReviewResultMap">
+		SELECT * FROM movieview_review
+	</select>
+
+	<!--  단일 게시물 조회 -->
+	<select id="content" resultMap="ReviewResultMap">
+		SELECT  V.review_no AS review_no,
+			movie_no, review_writer, review_title, review_content, reg_date, view_cnt, star_sum, star_cnt,
+			U.file_id AS file_id,
+    		U.file_name AS file_name,
+    		U.file_size AS file_size,
+    		U.file_content_type AS file_content_type 
+		FROM movieview_review V
+		LEFT OUTER JOIN movieview_review_upload U 
+		ON V.review_no = U.review_no	
+		WHERE V.review_no = #{reviewNo}
+	</select>
+	
+	<!--  게시물 삭제 -->
+	<delete id="delete">
+		DELETE FROM movieview_review
+		WHERE review_no = #{reviewNo}
+	</delete>	
+	
+	
+	<!-- 게시물 수정 -->
+	<update id="modify">
+        UPDATE movieview_review 
+        SET review_title = #{reviewTitle}, review_content = #{reviewContent} 
+        WHERE review_no = #{reviewNo}
+    </update>
+	
+	
+	<!--  페이지별 게시물 조회 -->
+	<select id = "listPaging" resultMap = "ReviewResultMap">
+		SELECT * 
+		FROM movieview_review 
+		WHERE movie_no = #{movieNo}
+		ORDER BY review_no DESC
+		LIMIT #{pageStart}, #{countPerPage}
+	
+	</select>
+	
+	
+	 <!-- 총 게시물 수 가져오기 -->
+    <select id="countArticles" resultType="int">
+        
+        SELECT 
+            COUNT(review_no) 
+        FROM movieview_review
+        
+    </select>
+    
+    
+    
+    <!--  검색된 총 게시물 수 -->
+	<select id="countSearchArticles" resultType="int">
+		SELECT COUNT(*) 
+		FROM movieview_review 		
+		<include refid="search" />
+	</select>
+	
+	<!--  검색된 게시물 목록 조회 처리 -->
+	<select id="listSearch" resultMap="ReviewResultMap">
+		SELECT  V.review_no AS review_no,
+			review_writer, review_title, review_content, reg_date, view_cnt, star_sum, star_cnt,
+			U.file_id AS file_id,
+    		U.file_name AS file_name,
+    		U.file_size AS file_size,
+    		U.file_content_type AS file_content_type 
+		FROM movieview_review V
+		LEFT OUTER JOIN movieview_review_upload U 
+		ON V.review_no = U.review_no		
+		<include refid="search" />
+		ORDER BY review_no DESC
+		LIMIT #{criteria.pageStart}, #{criteria.countPerPage}
+	</select>
+	
+	<!-- 중복되는 동적 sql문 처리 -->
+	<sql id="search">
+		<if test="criteria.condition != 'basic'">
+			<!--  동적 sql구문 -->
+			<if test="criteria.condition == 'title'">
+			WHERE review_title LIKE CONCAT('%', #{criteria.keyword}, '%') AND movie_no =#{movieNo}
+			</if>
+			<if test="criteria.condition == 'writer'">
+			WHERE review_writer LIKE CONCAT('%', #{criteria.keyword}, '%') AND movie_no =#{movieNo} 
+			</if>
+			<if test="criteria.condition == 'content'">
+			WHERE review_content LIKE CONCAT('%', #{criteria.keyword}, '%') AND movie_no =#{movieNo}
+			</if>
+		</if>
+		<if test="criteria.condition == 'basic'">
+			WHERE movie_no = #{movieNo}
+		</if>
+	</sql>
+	
+	<!--  조회수 처리 -->
+	<update id="updateViewCnt">
+		UPDATE movieview_review 
+		SET view_cnt = view_cnt + 1 
+		WHERE review_no = #{reviewNo}
+	</update>
+	
+	<!-- 별점추가 -->
+	<update id="updateStar">
+		UPDATE movieview_review 
+		SET star_cnt = star_cnt + 1, star_sum = star_sum + #{starSum} 
+		WHERE review_no = #{reviewNo}
+	</update>
+	
+	<!-- 파일업로드 -->
+	<!-- 리뷰 첨부파일 등록 -->
+	<insert id="insertFile">
+		INSERT INTO movieview_review_upload
+			(review_no, file_name, file_size, file_content_type, file_data)
+		VALUES (#{reviewNo}, #{fileName}, #{fileSize}, #{fileContentType}, #{fileData} )
+	</insert>
+	
+	<!-- 여기부터 -->
+	<!--  최대 리뷰번호 조회 -->
+	<select id="selectMaxReviewNo" resultType="int">
+		SELECT 
+			MAX(review_no) 
+		FROM movieview_review
+	</select>
+	
+	<!-- 파일 조회 기능 -->
+	<select id="getFile" resultMap = "FileMap">
+		SELECT * 
+		FROM movieview_review_upload 
+		WHERE file_id=#{fileId}	
+	</select>
+</mapper>
+
+
+
+
+
+
+
+

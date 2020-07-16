@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.spring.movieview.user.repository.IUserDAO">
+
+	<!-- UserResultMap 설정 -->
+	
+	
+	<resultMap id="UserResultMap" type="com.spring.movieview.user.model.UserVO">
+        <id property="userId" column="user_id"/>
+        <result property="userPw" column="user_pw" />
+        <result property="userName" column="user_name" />
+        <result property="userRegDate" column="user_reg_date" />        
+        <result property="sessionId" column="session_id" />        
+        <result property="sessionLimit" column="session_limit" />     
+        <result property="userLevel" column="user_level"/>   
+        <result property="userBirth" column="user_birth" />
+    </resultMap>
+
+	<!-- 회원 등록 SQL -->
+	<insert id="register">
+		INSERT INTO user 
+		(user_id, user_pw, user_name, user_birth) 
+		VALUES (#{userId}, #{userPw}, #{userName}, #{userBirth});
+	</insert>
+	
+	<!-- 아이디 중복확인 SQL -->
+	<select id="isDuplicateId" resultType="int">
+		SELECT COUNT(*) 
+		FROM user 
+		WHERE user_id=#{userId}
+	</select>
+	
+	<!-- 아이디 중복확인 SQL -->
+	<select id="isCheck" resultType="int">
+		SELECT COUNT(*) 
+		FROM user 
+		WHERE user_id=#{userId}
+	</select>
+	
+	<!-- 로그인 처리 SQL -->
+	<select id="login" resultMap="UserResultMap">
+	    SELECT * 
+	    FROM user 
+	    WHERE user_id=#{userId} AND user_pw=#{userPw}
+	</select>
+	
+	<!-- 자동 로그인을 체크할 경우 세션아이디와 로그인 유지시간을 갱신 -->
+	<update id="keepLogin">
+		UPDATE user 
+		SET session_id=#{sessionId}, 
+		   session_limit=#{sessionLimit} 
+		WHERE user_id=#{userId}
+	</update>
+	
+	<!-- 
+		자동로그인을 사용한 방문자가 재방문했을 시 
+		로그인 쿠키의 세션아이디와 일치하는 회원의 정보를 불러옴
+	 -->
+	<select id="getUserWithSessionId" resultMap="UserResultMap">
+		SELECT * FROM user 
+		WHERE session_id=#{sessionId}
+	</select>
+
+	<!-- 유저개인정보 -->
+	<select id="getOneUser" resultMap="UserResultMap">
+		SELECT * FROM user
+		WHERE user_id =#{userId}
+	</select>
+	<!-- 유저회원탈퇴 -->
+	<delete id="dropUser">
+		DELETE FROM user
+		WHERE user_id = #{id} AND user_pw = #{pw}
+	</delete>
+	<!-- 전체 회원 조회 -->
+	<select id="userList" resultMap="UserResultMap">
+		SELECT * FROM user
+		ORDER BY user_level DESC
+		LIMIT #{pageStart}, #{countPerPage}
+	</select>
+	
+	<!-- 전체 회원 수  -->
+	<select id="countTotalUser" resultType="int">
+		SELECT COUNT(*) FROM user
+	</select>
+</mapper>
+
+
+
+
+
+
+
+

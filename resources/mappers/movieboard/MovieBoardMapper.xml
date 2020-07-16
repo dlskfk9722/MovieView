@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.spring.movieview.movieboard.repository.IMovieDAO">
+
+<resultMap id="MovieBoardMap" type="com.spring.movieview.movieboard.model.MovieVO">
+		<id property="movieNo" column="movie_no" />
+		<result property="title" column="title" />
+		<result property="genre" column="genre" />
+		<result property="nation" column="nation" />
+		<result property="openDate" column="open_date" />
+		<result property="director" column="director" />
+		<result property="actor" column="actor"/>
+		<result property="synoposis" column="synoposis"/>
+		<result property="score" column="score"/>
+		<!-- 0803 파일업로드용 추가 -->
+		<result column="file_id" property="fileId"/>
+		<result column="file_name" property="fileName"/>
+		<result column="file_size" property="fileSize"/>
+		<result column="file_content_type" property="fileContentType"/>
+	</resultMap>
+	<!-- 업로드용 filemap -->
+	<resultMap type="com.spring.movieview.movieboard.model.MovieUploadFileVO" id="FileMap">
+		<id column="file_id" property="fileId"/>
+		<result column="movie_no" property="movieNo"/>
+		<result column="file_name" property="fileName"/>
+		<result column="file_size" property="fileSize"/>
+		<result column="file_content_type" property="fileContentType"/>
+		<result column="file_data" property="fileData"/>
+	</resultMap>
+	
+	
+
+<select id="getAllList" resultMap="MovieBoardMap">
+	SELECT * FROM movie_board
+	ORDER BY movie_no DESC
+</select>
+
+<select id="getOneList" resultMap="MovieBoardMap">
+	SELECT * FROM movie_board
+	WHERE movie_no = #{movieNo}
+</select>
+
+<insert id="insertMovie">
+	INSERT INTO movie_board (title, genre, nation, open_date, director, actor, synoposis)
+	VALUES(#{title}, #{genre}, #{nation}, #{openDate}, #{director}, #{actor}, #{synoposis})
+</insert>
+
+<delete id="deleteMovie">
+	DELETE FROM movie_board
+	WHERE movie_no = #{movieNo}
+</delete>
+
+<update id="updateMovie">
+	UPDATE movie_board SET title=#{title}, genre=#{genre}, nation=#{nation}, open_date=#{openDate},
+	 director=#{director}, actor=#{actor}, synoposis=#{synoposis}
+	WHERE movie_no = #{movieNo}
+</update>
+
+<!-- <select id="getListPaging" resultMap="MovieBoardMap">
+	SELECT * FROM movie_board
+	<if test="searchGenre != 'basic'">
+		WHERE genre = #{searchGenre}
+		<if test="condition == 'title'">
+			AND title LIKE CONCAT('%', #{keyword}, '%')
+		</if>
+	</if>
+	<if test="searchGenre == 'basic' ">
+		<if test="condition == 'title'">
+			WHERE title LIKE CONCAT('%', #{keyword}, '%')
+		</if>
+	</if>
+	ORDER BY movie_no DESC
+	LIMIT #{pageStart}, #{countPerPage}
+</select>-->
+
+<select id="countAll" resultType="int">
+	SELECT COUNT(*) FROM movie_board
+	<if test="searchGenre != 'basic'">
+		WHERE genre = #{searchGenre}
+		<if test="condition == 'title'">
+			AND title LIKE CONCAT('%', #{keyword}, '%')
+		</if>
+	</if>
+	<if test="searchGenre == 'basic' ">
+		<if test="condition == 'title'">
+			WHERE title LIKE CONCAT('%', #{keyword}, '%')
+		</if>
+	</if>
+</select>
+<!-- 파일업로드 -->
+	<!-- 리뷰 첨부파일 등록 -->
+	<insert id="insertFile">
+		INSERT INTO movie_board_upload
+			(movie_no, file_name, file_size, file_content_type, file_data)
+		VALUES (#{movieNo}, #{fileName}, #{fileSize}, #{fileContentType}, #{fileData} )
+	</insert>
+	
+	<select id="selectMaxMovieNo" resultType="int">
+		SELECT 
+			MAX(movie_no) 
+		FROM movie_board
+	</select>
+	
+	<select id="getFile" resultMap = "FileMap">
+		SELECT * 
+		FROM movie_board_upload 
+		WHERE file_id=#{fileId}	
+	
+	</select>
+	
+	<select id="getFileByMovieNo" resultMap ="FileMap">
+		SELECT * 
+		FROM movie_board_upload 
+		WHERE movie_no=#{movieNo}	
+	</select>
+	
+	
+	<!-- 이전 getListPaging은 맨밑에 -->
+	<select id="getListPaging" resultMap="MovieBoardMap">
+	SELECT MB.movie_no AS movie_no,
+		title, genre, nation, open_date, director, actor, synoposis,
+	MBU.file_id AS file_id,
+    MBU.file_name AS file_name,
+    MBU.file_size AS file_size,
+    MBU.file_content_type AS file_content_type
+	FROM movie_board MB
+	LEFT OUTER JOIN movie_board_upload MBU
+	ON MB.movie_no = MBU.movie_no
+	<if test="criteria.searchGenre != 'basic'">
+		WHERE genre = #{criteria.searchGenre}
+		<if test="criteria.condition == 'title'">
+			AND title LIKE CONCAT('%', #{criteria.keyword}, '%')
+		</if>
+	</if>
+	<if test="criteria.searchGenre == 'basic' ">
+		<if test="criteria.condition == 'title'">
+			WHERE title LIKE CONCAT('%', #{criteria.keyword}, '%')
+		</if>
+	</if>
+	ORDER BY movie_no DESC
+	LIMIT #{criteria.pageStart}, #{criteria.countPerPage}
+	</select>
+
+
+</mapper>
